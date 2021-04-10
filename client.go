@@ -1,6 +1,7 @@
 package fhlbclient
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,8 @@ type LBClient struct {
 	cln []innerClient
 }
 
+var ErrNoAliveClients = errors.New("no alive clients available")
+
 func (c *LBClient) init() {
 	pd := c.Penalty
 	if pd <= 0 {
@@ -44,12 +47,20 @@ func (c *LBClient) init() {
 }
 
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
-	return c.get().DoDeadline(req, resp, deadline)
+	ic := c.get()
+	if ic == nil {
+		return ErrNoAliveClients
+	}
+	return ic.DoDeadline(req, resp, deadline)
 }
 
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
+	ic := c.get()
+	if ic == nil {
+		return ErrNoAliveClients
+	}
 	deadline := time.Now().Add(timeout)
-	return c.get().DoDeadline(req, resp, deadline)
+	return ic.DoDeadline(req, resp, deadline)
 }
 
 func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
