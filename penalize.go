@@ -7,6 +7,8 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+const maxPenalty = 300
+
 type PenalizingClient struct {
 	bc  fasthttp.BalancingClient
 	hc  HealthCheckFn
@@ -17,8 +19,10 @@ type PenalizingClient struct {
 
 func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	err := c.bc.DoDeadline(req, resp, deadline)
-	if !c.isHealthy(req, resp, err) && c.incPenalty() {
-		time.AfterFunc(c.pd, c.decPenalty)
+	if !c.isHealthy(req, resp, err) {
+		if c.incPenalty() {
+			time.AfterFunc(c.pd, c.decPenalty)
+		}
 	} else {
 		atomic.AddUint64(&c.tot, 1)
 	}
