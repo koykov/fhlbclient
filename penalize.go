@@ -15,38 +15,36 @@ type PenalizingClient struct {
 	tot uint64
 }
 
-func (ic *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
-	err := ic.bc.DoDeadline(req, resp, deadline)
-	if !ic.isHealthy(req, resp, err) && ic.incPenalty() {
-		time.AfterFunc(ic.pd, ic.decPenalty)
+func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
+	err := c.bc.DoDeadline(req, resp, deadline)
+	if !c.isHealthy(req, resp, err) && c.incPenalty() {
+		time.AfterFunc(c.pd, c.decPenalty)
 	} else {
-		atomic.AddUint64(&ic.tot, 1)
+		atomic.AddUint64(&c.tot, 1)
 	}
 	return err
 }
 
-func (ic *PenalizingClient) PendingRequests() int {
-	n := ic.bc.PendingRequests()
-	m := atomic.LoadInt32(&ic.pen)
-	return n + int(m)
+func (c *PenalizingClient) RequestStats() (uint64, uint64) {
+	return uint64(c.bc.PendingRequests() + int(atomic.LoadInt32(&c.pen))), atomic.LoadUint64(&c.tot)
 }
 
-func (ic *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
-	if ic.hc == nil {
+func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
+	if c.hc == nil {
 		return err == nil
 	}
-	return ic.hc(req, resp, err)
+	return c.hc(req, resp, err)
 }
 
-func (ic *PenalizingClient) incPenalty() bool {
-	m := atomic.AddInt32(&ic.pen, 1)
+func (c *PenalizingClient) incPenalty() bool {
+	m := atomic.AddInt32(&c.pen, 1)
 	if m > maxPenalty {
-		ic.decPenalty()
+		c.decPenalty()
 		return false
 	}
 	return true
 }
 
-func (ic *PenalizingClient) decPenalty() {
-	atomic.AddInt32(&ic.pen, -1)
+func (c *PenalizingClient) decPenalty() {
+	atomic.AddInt32(&c.pen, -1)
 }

@@ -90,15 +90,13 @@ func (c *LBClient) get() *PenalizingClient {
 	}
 
 	if off < len(c.cln) {
-		minN := minC.PendingRequests()
-		minT := atomic.LoadUint64(&minC.tot)
+		minN, minT := minC.RequestStats()
 		for i := off; i < len(c.cln); i++ {
 			pc := &c.cln[i]
 			if atomic.LoadInt32(&pc.pen) > 0 {
 				continue
 			}
-			n := pc.PendingRequests()
-			t := atomic.LoadUint64(&pc.tot)
+			n, t := pc.RequestStats()
 			if n < minN || (n == minN && t < minT) {
 				minC = pc
 				minN = n
