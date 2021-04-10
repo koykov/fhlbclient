@@ -7,7 +7,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-type innerClient struct {
+type PenalizingClient struct {
 	bc  fasthttp.BalancingClient
 	hc  HealthCheckFn
 	pd  time.Duration
@@ -15,7 +15,7 @@ type innerClient struct {
 	tot uint64
 }
 
-func (ic *innerClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
+func (ic *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	err := ic.bc.DoDeadline(req, resp, deadline)
 	if !ic.isHealthy(req, resp, err) && ic.incPenalty() {
 		time.AfterFunc(ic.pd, ic.decPenalty)
@@ -25,20 +25,20 @@ func (ic *innerClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response
 	return err
 }
 
-func (ic *innerClient) PendingRequests() int {
+func (ic *PenalizingClient) PendingRequests() int {
 	n := ic.bc.PendingRequests()
 	m := atomic.LoadInt32(&ic.pen)
 	return n + int(m)
 }
 
-func (ic *innerClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
+func (ic *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
 	if ic.hc == nil {
 		return err == nil
 	}
 	return ic.hc(req, resp, err)
 }
 
-func (ic *innerClient) incPenalty() bool {
+func (ic *PenalizingClient) incPenalty() bool {
 	m := atomic.AddInt32(&ic.pen, 1)
 	if m > maxPenalty {
 		ic.decPenalty()
@@ -47,6 +47,6 @@ func (ic *innerClient) incPenalty() bool {
 	return true
 }
 
-func (ic *innerClient) decPenalty() {
+func (ic *PenalizingClient) decPenalty() {
 	atomic.AddInt32(&ic.pen, -1)
 }

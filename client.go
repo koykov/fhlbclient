@@ -26,7 +26,7 @@ type LBClient struct {
 	Balancer    Balancer
 	once        sync.Once
 
-	cln []innerClient
+	cln []PenalizingClient
 }
 
 var ErrNoAliveClients = errors.New("no alive clients available")
@@ -36,9 +36,9 @@ func (c *LBClient) init() {
 	if pd <= 0 {
 		pd = DefaultPenalty
 	}
-	c.cln = make([]innerClient, 0, len(c.Clients))
+	c.cln = make([]PenalizingClient, 0, len(c.Clients))
 	for _, bc := range c.Clients {
-		c.cln = append(c.cln, innerClient{
+		c.cln = append(c.cln, PenalizingClient{
 			bc: bc,
 			hc: c.HealthCheck,
 			pd: pd,
@@ -47,20 +47,20 @@ func (c *LBClient) init() {
 }
 
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
-	ic := c.get()
-	if ic == nil {
+	pc := c.get()
+	if pc == nil {
 		return ErrNoAliveClients
 	}
-	return ic.DoDeadline(req, resp, deadline)
+	return pc.DoDeadline(req, resp, deadline)
 }
 
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
-	ic := c.get()
-	if ic == nil {
+	pc := c.get()
+	if pc == nil {
 		return ErrNoAliveClients
 	}
 	deadline := time.Now().Add(timeout)
-	return ic.DoDeadline(req, resp, deadline)
+	return pc.DoDeadline(req, resp, deadline)
 }
 
 func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
@@ -71,11 +71,11 @@ func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 	return c.DoTimeout(req, resp, timeout)
 }
 
-func (c *LBClient) get() *innerClient {
+func (c *LBClient) get() *PenalizingClient {
 	c.once.Do(c.init)
 
 	var (
-		minC *innerClient
+		minC *PenalizingClient
 		off  int
 	)
 	for i := 0; i < len(c.cln); i++ {
@@ -93,14 +93,14 @@ func (c *LBClient) get() *innerClient {
 		minN := minC.PendingRequests()
 		minT := atomic.LoadUint64(&minC.tot)
 		for i := off; i < len(c.cln); i++ {
-			ic := &c.cln[i]
-			if atomic.LoadInt32(&ic.pen) > 0 {
+			pc := &c.cln[i]
+			if atomic.LoadInt32(&pc.pen) > 0 {
 				continue
 			}
-			n := ic.PendingRequests()
-			t := atomic.LoadUint64(&ic.tot)
+			n := pc.PendingRequests()
+			t := atomic.LoadUint64(&pc.tot)
 			if n < minN || (n == minN && t < minT) {
-				minC = ic
+				minC = pc
 				minN = n
 				minT = t
 			}

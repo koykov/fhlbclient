@@ -1,5 +1,5 @@
 package fhlbclient
 
 type Balancer interface {
-	Evaluate()
+	Evaluate([]PenalizingClient) *PenalizingClient
 }
