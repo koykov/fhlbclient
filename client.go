@@ -3,7 +3,6 @@ package fhlbclient
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/valyala/fasthttp"
@@ -73,37 +72,5 @@ func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 
 func (c *LBClient) get() *PenalizingClient {
 	c.once.Do(c.init)
-
-	var (
-		minC *PenalizingClient
-		off  int
-	)
-	for i := 0; i < len(c.cln); i++ {
-		if atomic.LoadInt32(&c.cln[i].pen) == 0 {
-			minC = &c.cln[i]
-			off = i + 1
-			break
-		}
-	}
-	if minC == nil {
-		return nil
-	}
-
-	if off < len(c.cln) {
-		minN, minT := minC.RequestStats()
-		for i := off; i < len(c.cln); i++ {
-			pc := &c.cln[i]
-			if atomic.LoadInt32(&pc.pen) > 0 {
-				continue
-			}
-			n, t := pc.RequestStats()
-			if n < minN || (n == minN && t < minT) {
-				minC = pc
-				minN = n
-				minT = t
-			}
-		}
-	}
-
-	return minC
+	return c.Balancer.Evaluate(c.cln)
 }

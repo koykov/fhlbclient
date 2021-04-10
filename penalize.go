@@ -29,6 +29,10 @@ func (c *PenalizingClient) RequestStats() (uint64, uint64) {
 	return uint64(c.bc.PendingRequests() + int(atomic.LoadInt32(&c.pen))), atomic.LoadUint64(&c.tot)
 }
 
+func (c *PenalizingClient) UnderPenalty() bool {
+	return atomic.LoadInt32(&c.pen) > 0
+}
+
 func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
 	if c.hc == nil {
 		return err == nil
