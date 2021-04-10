@@ -11,8 +11,6 @@ import (
 const (
 	DefaultTimeout = time.Second
 	DefaultPenalty = time.Second * 3
-
-	maxPenalty = 300
 )
 
 type HealthCheckFn func(req *fasthttp.Request, resp *fasthttp.Response, err error) bool
@@ -46,20 +44,18 @@ func (c *LBClient) init() {
 }
 
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
-	pc := c.get()
-	if pc == nil {
-		return ErrNoAliveClients
+	if pc := c.get(); pc != nil {
+		return pc.DoDeadline(req, resp, deadline)
 	}
-	return pc.DoDeadline(req, resp, deadline)
+	return ErrNoAliveClients
 }
 
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
-	pc := c.get()
-	if pc == nil {
-		return ErrNoAliveClients
+	if pc := c.get(); pc != nil {
+		deadline := time.Now().Add(timeout)
+		return pc.DoDeadline(req, resp, deadline)
 	}
-	deadline := time.Now().Add(timeout)
-	return pc.DoDeadline(req, resp, deadline)
+	return ErrNoAliveClients
 }
 
 func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
@@ -72,5 +68,8 @@ func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 
 func (c *LBClient) get() *PenalizingClient {
 	c.once.Do(c.init)
+	if len(c.cln) == 0 {
+		return nil
+	}
 	return c.Balancer.Evaluate(c.cln)
 }
