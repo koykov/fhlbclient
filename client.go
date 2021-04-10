@@ -2,6 +2,7 @@ package fhlbclient
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/valyala/fasthttp"
@@ -28,12 +29,12 @@ type LBClient struct {
 }
 
 func (c *LBClient) init() {
+	pd := c.Penalty
+	if pd <= 0 {
+		pd = DefaultPenalty
+	}
 	c.cln = make([]innerClient, 0, len(c.Clients))
 	for _, bc := range c.Clients {
-		pd := c.Penalty
-		if pd <= 0 {
-			pd = DefaultPenalty
-		}
 		c.cln = append(c.cln, innerClient{
 			bc: bc,
 			hc: c.HealthCheck,
@@ -61,5 +62,39 @@ func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 
 func (c *LBClient) get() *innerClient {
 	c.once.Do(c.init)
-	return nil
+
+	var (
+		minC *innerClient
+		off  int
+	)
+	for i := 0; i < len(c.cln); i++ {
+		if atomic.LoadInt32(&c.cln[i].pen) == 0 {
+			minC = &c.cln[i]
+			off = i + 1
+			break
+		}
+	}
+	if minC == nil {
+		return nil
+	}
+
+	if off < len(c.cln) {
+		minN := minC.PendingRequests()
+		minT := atomic.LoadUint64(&minC.tot)
+		for i := off; i < len(c.cln); i++ {
+			ic := &c.cln[i]
+			if atomic.LoadInt32(&ic.pen) > 0 {
+				continue
+			}
+			n := ic.PendingRequests()
+			t := atomic.LoadUint64(&ic.tot)
+			if n < minN || (n == minN && t < minT) {
+				minC = ic
+				minN = n
+				minT = t
+			}
+		}
+	}
+
+	return minC
 }
