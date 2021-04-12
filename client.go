@@ -13,11 +13,9 @@ const (
 	DefaultPenalty = time.Second * 3
 )
 
-type HealthCheckFn func(req *fasthttp.Request, resp *fasthttp.Response, err error) bool
-
 type LBClient struct {
 	Clients     []fasthttp.BalancingClient
-	HealthCheck HealthCheckFn
+	HealthCheck HealthChecker
 	Timeout     time.Duration
 	Penalty     time.Duration
 	Balancer    Balancer

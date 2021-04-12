@@ -11,7 +11,7 @@ const maxPenalty = 300
 
 type PenalizingClient struct {
 	bc  fasthttp.BalancingClient
-	hc  HealthCheckFn
+	hc  HealthChecker
 	pd  time.Duration
 	pen int32
 	tot uint64
@@ -41,7 +41,7 @@ func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Respo
 	if c.hc == nil {
 		return err == nil
 	}
-	return c.hc(req, resp, err)
+	return c.hc.Check(req, resp, err)
 }
 
 func (c *PenalizingClient) incPenalty() bool {
