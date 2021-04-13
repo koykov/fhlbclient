@@ -15,7 +15,7 @@ const (
 
 // Load balancing client.
 //
-// see https://github.com/valyala/fasthttp/blob/master/lbclient.go for details and comparison.
+// See https://github.com/valyala/fasthttp/blob/master/lbclient.go for details and comparison.
 type LBClient struct {
 	// Array of clients to balance.
 	Clients []fasthttp.BalancingClient
@@ -28,6 +28,8 @@ type LBClient struct {
 	Penalty time.Duration
 	// Balancer helper.
 	Balancer Balancer
+	// Request hooks helper.
+	RequestHooker RequestHooker
 	// Array of wrappers around Clients.
 	// Note, that Clients used only for init step and copies into cln.
 	cln []PenalizingClient
@@ -44,6 +46,10 @@ func (c *LBClient) init() {
 	if pd <= 0 {
 		pd = DefaultPenalty
 	}
+	// Register request hooks helper.
+	if c.RequestHooker == nil {
+		c.RequestHooker = &DummyRequestHooks{}
+	}
 	// Make new PenalizingClient for each provided BalancingClient.
 	c.cln = make([]PenalizingClient, 0, len(c.Clients))
 	for _, bc := range c.Clients {
@@ -58,7 +64,10 @@ func (c *LBClient) init() {
 // Execute request with given deadline.
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	if pc := c.get(); pc != nil {
-		return pc.DoDeadline(req, resp, deadline)
+		c.RequestHooker.PreRequest(req, resp, pc)
+		err := pc.DoDeadline(req, resp, deadline)
+		c.RequestHooker.PostRequest(req, resp, pc, err)
+		return err
 	}
 	// No available clients found (all of them under penalty).
 	return ErrNoAliveClients
@@ -68,7 +77,10 @@ func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, de
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
 	if pc := c.get(); pc != nil {
 		deadline := time.Now().Add(timeout)
-		return pc.DoDeadline(req, resp, deadline)
+		c.RequestHooker.PreRequest(req, resp, pc)
+		err := pc.DoDeadline(req, resp, deadline)
+		c.RequestHooker.PostRequest(req, resp, pc, err)
+		return err
 	}
 	// No available clients found (all of them under penalty).
 	return ErrNoAliveClients
