@@ -6,9 +6,9 @@ import (
 
 // Native balancer implementation.
 //
-// Exact reproduces native algorithm https://github.com/valyala/fasthttp/blob/master/lbclient.go#L99
-// Main disadvantage: when any of clients becomes unavailable, LBClient thinks it is so fast and send all of requests
-// to it. That's why this package exists.
+// Exactly reproduces native algorithm https://github.com/valyala/fasthttp/blob/master/lbclient.go#L99
+// Main disadvantage: when any of clients becomes unavailable, LBClient thinks this client is the fastest and send all
+// of requests to it. That's why this package exists.
 type Native struct{}
 
 func (b *Native) Evaluate(list []fhlbclient.PenalizingClient) *fhlbclient.PenalizingClient {
