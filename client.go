@@ -63,45 +63,26 @@ func (c *LBClient) init() {
 
 // Execute request with given deadline.
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
-	if pc := c.get(); pc != nil {
-		c.RequestHooker.PreRequest(req, resp, pc)
-		err := pc.DoDeadline(req, resp, deadline)
-		c.RequestHooker.PostRequest(req, resp, pc, err)
-		return err
-	}
-	// No available clients found (all of them under penalty).
-	return ErrNoAliveClients
+	return c.DoDeadlineWB(req, resp, deadline, c.Balancer)
 }
 
 // Execute request with given timeout.
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
-	if pc := c.get(); pc != nil {
-		deadline := time.Now().Add(timeout)
-		c.RequestHooker.PreRequest(req, resp, pc)
-		err := pc.DoDeadline(req, resp, deadline)
-		c.RequestHooker.PostRequest(req, resp, pc, err)
-		return err
-	}
-	// No available clients found (all of them under penalty).
-	return ErrNoAliveClients
+	return c.DoTimeoutWB(req, resp, timeout, c.Balancer)
 }
 
 // Execute request with internal timeout.
 func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
-	timeout := c.Timeout
-	if timeout <= 0 {
-		timeout = DefaultTimeout
-	}
-	return c.DoTimeout(req, resp, timeout)
+	return c.DoWB(req, resp, c.Balancer)
 }
 
 // Get least loaded client.
-func (c *LBClient) get() *PenalizingClient {
+func (c *LBClient) get(b Balancer) *PenalizingClient {
 	// Run init() once.
 	c.once.Do(c.init)
-	if len(c.cln) == 0 {
+	if len(c.cln) == 0 || b == nil {
 		return nil
 	}
 	// Use balancer helper to get best candidate.
-	return c.Balancer.Evaluate(c.cln)
+	return b.Evaluate(c.cln)
 }
