@@ -54,6 +54,11 @@ func (c *PenalizingClient) UnderPenalty() bool {
 	return atomic.LoadInt32(&c.pen) > 0
 }
 
+// Get inner fasthttp's balancing client instance.
+func (c *PenalizingClient) Instance() fasthttp.BalancingClient {
+	return c.bc
+}
+
 // Check if client has good health.
 func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Response, err error) bool {
 	if c.hc == nil {
