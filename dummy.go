@@ -2,9 +2,13 @@ package fhlbclient
 
 import "github.com/valyala/fasthttp"
 
+type DummyBalancer struct{}
+
+func (b *DummyBalancer) Evaluate(_ []PenalizingClient) *PenalizingClient { return nil }
+
 type DummyRequestHooks struct{}
 
-func (d *DummyRequestHooks) PreRequest(_ *fasthttp.Request, _ *fasthttp.Response, _ *PenalizingClient) {
+func (h *DummyRequestHooks) PreRequest(_ *fasthttp.Request, _ *fasthttp.Response, _ *PenalizingClient) {
 }
-func (d *DummyRequestHooks) PostRequest(_ *fasthttp.Request, _ *fasthttp.Response, _ *PenalizingClient, _ error) {
+func (h *DummyRequestHooks) PostRequest(_ *fasthttp.Request, _ *fasthttp.Response, _ *PenalizingClient, _ error) {
 }

@@ -46,7 +46,11 @@ func (c *LBClient) init() {
 	if pd <= 0 {
 		pd = DefaultPenalty
 	}
-	// Register request hooks helper.
+	// Check balancer helper.
+	if c.Balancer == nil {
+		c.Balancer = &DummyBalancer{}
+	}
+	// Check request hooks helper.
 	if c.RequestHooker == nil {
 		c.RequestHooker = &DummyRequestHooks{}
 	}
