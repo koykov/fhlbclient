@@ -33,7 +33,7 @@ func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Resp
 		// Increase penalty counter.
 		if c.incPenalty() {
 			// Register postponed func to decrease the counter.
-			time.AfterFunc(c.pd, c.decPenalty)
+			time.AfterFunc(c.pd, c.resetPenalty)
 		}
 	} else {
 		// Increase total counter.
@@ -69,15 +69,14 @@ func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Respo
 
 // Increase penalty counter.
 func (c *PenalizingClient) incPenalty() bool {
-	m := atomic.AddInt32(&c.pen, 1)
-	if m > maxPenalty {
-		c.decPenalty()
+	if m := atomic.AddInt32(&c.pen, 1); m > maxPenalty {
+		atomic.AddInt32(&c.pen, -1)
 		return false
 	}
 	return true
 }
 
-// Decrease penalty counter.
-func (c *PenalizingClient) decPenalty() {
-	atomic.AddInt32(&c.pen, -1)
+// Reset penalty counter.
+func (c *PenalizingClient) resetPenalty() {
+	atomic.StoreInt32(&c.pen, 0)
 }
