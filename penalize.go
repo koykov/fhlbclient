@@ -28,13 +28,10 @@ type PenalizingClient struct {
 func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	// Execute request.
 	err := c.bc.DoDeadline(req, resp, deadline)
-	// Check health state.
-	if !c.isHealthy(req, resp, err) {
-		// Increase penalty counter.
-		if c.incPenalty() {
-			// Register postponed func to decrease the counter.
-			time.AfterFunc(c.pd, c.resetPenalty)
-		}
+	// Check health state and increase penalty counter.
+	if !c.isHealthy(req, resp, err) && c.incPenalty() {
+		// Register postponed func to decrease the counter.
+		time.AfterFunc(c.pd, c.decPenalty)
 	} else {
 		// Increase total counter.
 		atomic.AddUint64(&c.tot, 1)
@@ -69,14 +66,15 @@ func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Respo
 
 // Increase penalty counter.
 func (c *PenalizingClient) incPenalty() bool {
-	if m := atomic.AddInt32(&c.pen, 1); m > maxPenalty {
-		atomic.AddInt32(&c.pen, -1)
+	m := atomic.AddInt32(&c.pen, 1)
+	if m > maxPenalty {
+		c.decPenalty()
 		return false
 	}
 	return true
 }
 
-// Reset penalty counter.
-func (c *PenalizingClient) resetPenalty() {
-	atomic.StoreInt32(&c.pen, 0)
+// Decrease penalty counter.
+func (c *PenalizingClient) decPenalty() {
+	atomic.AddInt32(&c.pen, -1)
 }
