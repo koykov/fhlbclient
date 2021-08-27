@@ -1,6 +1,7 @@
 package fhlbclient
 
 import (
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -19,7 +20,7 @@ type PenalizingClient struct {
 	pd time.Duration
 	// Penalty counter.
 	// pen > 0 means that client is under penalty.
-	pen int32
+	pen uint32
 	// Total requests counter.
 	tot uint64
 }
@@ -43,12 +44,12 @@ func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Resp
 //
 // Pending requests value includes penalty counter value.
 func (c *PenalizingClient) RequestStats() (uint64, uint64) {
-	return uint64(c.bc.PendingRequests() + int(atomic.LoadInt32(&c.pen))), atomic.LoadUint64(&c.tot)
+	return uint64(c.bc.PendingRequests() + int(atomic.LoadUint32(&c.pen))), atomic.LoadUint64(&c.tot)
 }
 
 // Check if client is under penalty.
 func (c *PenalizingClient) UnderPenalty() bool {
-	return atomic.LoadInt32(&c.pen) > 0
+	return atomic.LoadUint32(&c.pen) > 0
 }
 
 // Get inner fasthttp's balancing client instance.
@@ -66,8 +67,7 @@ func (c *PenalizingClient) isHealthy(req *fasthttp.Request, resp *fasthttp.Respo
 
 // Increase penalty counter.
 func (c *PenalizingClient) incPenalty() bool {
-	m := atomic.AddInt32(&c.pen, 1)
-	if m > maxPenalty {
+	if m := atomic.AddUint32(&c.pen, 1); m > maxPenalty {
 		c.decPenalty()
 		return false
 	}
@@ -76,5 +76,5 @@ func (c *PenalizingClient) incPenalty() bool {
 
 // Decrease penalty counter.
 func (c *PenalizingClient) decPenalty() {
-	atomic.AddInt32(&c.pen, -1)
+	atomic.AddUint32(&c.pen, math.MaxUint32)
 }
