@@ -9,7 +9,7 @@ import (
 // Is similar to Native balancer, but excludes clients under penalty from work till them become work as expected.
 type Excluding struct{}
 
-func (b *Excluding) Evaluate(list []fhlbclient.PenalizingClient) *fhlbclient.PenalizingClient {
+func (b Excluding) Evaluate(list []fhlbclient.PenalizingClient) *fhlbclient.PenalizingClient {
 	var (
 		minC       *fhlbclient.PenalizingClient
 		minN, minT uint64

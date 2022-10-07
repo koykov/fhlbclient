@@ -11,7 +11,7 @@ import (
 // of requests to it. That's why this package exists.
 type Native struct{}
 
-func (b *Native) Evaluate(list []fhlbclient.PenalizingClient) *fhlbclient.PenalizingClient {
+func (b Native) Evaluate(list []fhlbclient.PenalizingClient) *fhlbclient.PenalizingClient {
 	minC := list[0]
 	minN, minT := minC.RequestStats()
 	for _, c := range list[1:] {
