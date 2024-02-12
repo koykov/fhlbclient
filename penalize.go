@@ -10,7 +10,7 @@ import (
 
 const maxPenalty = 300
 
-// A wrapper around BalancingClient with penalty support.
+// PenalizingClient is a wrapper around BalancingClient with penalty support.
 type PenalizingClient struct {
 	// BalancingClient instance.
 	bc fasthttp.BalancingClient
@@ -25,7 +25,7 @@ type PenalizingClient struct {
 	tot uint64
 }
 
-// Execute request with given deadline.
+// DoDeadline executes request with given deadline.
 func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	// Execute request.
 	err := c.bc.DoDeadline(req, resp, deadline)
@@ -40,19 +40,19 @@ func (c *PenalizingClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Resp
 	return err
 }
 
-// Get two requests metrics: pending requests and total requests counts.
+// RequestStats returns two requests metrics: pending requests and total requests counts.
 //
 // Pending requests value includes penalty counter value.
 func (c *PenalizingClient) RequestStats() (uint64, uint64) {
 	return uint64(c.bc.PendingRequests() + int(atomic.LoadUint32(&c.pen))), atomic.LoadUint64(&c.tot)
 }
 
-// Check if client is under penalty.
+// UnderPenalty checks if client is under penalty.
 func (c *PenalizingClient) UnderPenalty() bool {
 	return atomic.LoadUint32(&c.pen) > 0
 }
 
-// Get inner fasthttp's balancing client instance.
+// Instance returns inner fasthttp's balancing client instance.
 func (c *PenalizingClient) Instance() fasthttp.BalancingClient {
 	return c.bc
 }

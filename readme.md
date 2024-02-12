@@ -10,7 +10,7 @@ Average RPS is 3-5k requests.
 Sometime one of these clients become unavailable, mostly due to deployment process.
 HostClient instance of this server collects zero pending requests and maximum 300 penalty counter.
 
-In result this [condition](https://github.com/valyala/fasthttp/blob/master/lbclient.go#L105) decides that
+In result this [condition](https://github.com/valyala/fasthttp/blob/master/lbclient.go#L142) decides that
 this server is least loaded and prioritize it. Almost 100% of our traffic drains into the trash.
 
 This package was developed to solve that problem and also provides few handy features, see next section.

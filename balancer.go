@@ -1,6 +1,6 @@
 package fhlbclient
 
-// Clients balancer interface.
+// Balancer represents clients balancer interface.
 type Balancer interface {
 	Evaluate([]PenalizingClient) *PenalizingClient
 }

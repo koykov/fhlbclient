@@ -2,7 +2,7 @@ package fhlbclient
 
 import "github.com/valyala/fasthttp"
 
-// Request hooks helper interface.
+// RequestHooker represents pre-/post-request hooks helper interface.
 //
 // Needs to perform some actions before and after request's execution.
 type RequestHooker interface {
