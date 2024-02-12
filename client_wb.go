@@ -6,6 +6,7 @@ package fhlbclient
 import (
 	"time"
 
+	"github.com/koykov/fastconv"
 	"github.com/valyala/fasthttp"
 )
 
@@ -15,9 +16,11 @@ func (c *LBClient) DoDeadlineWB(req *fasthttp.Request, resp *fasthttp.Response, 
 		c.RequestHooker.PreRequest(req, resp, pc)
 		err := pc.DoDeadline(req, resp, deadline)
 		c.RequestHooker.PostRequest(req, resp, pc, err)
+		c.MetricsWriter.HostStatus(fastconv.B2S(req.Host()), resp.StatusCode())
 		return err
 	}
 	// No available clients found (all of them under penalty).
+	c.MetricsWriter.HostThrottle(fastconv.B2S(req.Host()))
 	return ErrNoAliveClients
 }
 
@@ -28,9 +31,11 @@ func (c *LBClient) DoTimeoutWB(req *fasthttp.Request, resp *fasthttp.Response, t
 		c.RequestHooker.PreRequest(req, resp, pc)
 		err := pc.DoDeadline(req, resp, deadline)
 		c.RequestHooker.PostRequest(req, resp, pc, err)
+		c.MetricsWriter.HostStatus(fastconv.B2S(req.Host()), resp.StatusCode())
 		return err
 	}
 	// No available clients found (all of them under penalty).
+	c.MetricsWriter.HostThrottle(fastconv.B2S(req.Host()))
 	return ErrNoAliveClients
 }
 

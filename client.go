@@ -30,6 +30,9 @@ type LBClient struct {
 	Balancer Balancer
 	// Request hooks helper.
 	RequestHooker RequestHooker
+	// Metrics writer handler.
+	// Available only in balancing methods: DoDeadlineWB, DoTimeoutWB and DoWB.
+	MetricsWriter MetricsWriter
 	// Array of wrappers around Clients.
 	// Note, that Clients used only for init step and copies into cln.
 	cln []PenalizingClient
@@ -48,11 +51,11 @@ func (c *LBClient) init() {
 	}
 	// Check balancer helper.
 	if c.Balancer == nil {
-		c.Balancer = &DummyBalancer{}
+		c.Balancer = DummyBalancer{}
 	}
 	// Check request hooks helper.
 	if c.RequestHooker == nil {
-		c.RequestHooker = &DummyRequestHooks{}
+		c.RequestHooker = DummyRequestHooks{}
 	}
 	// Make new PenalizingClient for each provided BalancingClient.
 	c.cln = make([]PenalizingClient, 0, len(c.Clients))
@@ -62,6 +65,10 @@ func (c *LBClient) init() {
 			hc: c.HealthCheck,
 			pd: pd,
 		})
+	}
+	// Check metrics writer.
+	if c.MetricsWriter == nil {
+		c.MetricsWriter = DummyMetricsWriter{}
 	}
 }
 
