@@ -10,7 +10,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// Execute request with given deadline and balancer.
+// DoDeadlineWB executes request with given deadline and balancer.
 func (c *LBClient) DoDeadlineWB(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time, b Balancer) error {
 	if pc := c.get(b); pc != nil {
 		c.RequestHooker.PreRequest(req, resp, pc)
@@ -24,7 +24,7 @@ func (c *LBClient) DoDeadlineWB(req *fasthttp.Request, resp *fasthttp.Response, 
 	return ErrNoAliveClients
 }
 
-// Execute request with given timeout and balancer.
+// DoTimeoutWB executes request with given timeout and balancer.
 func (c *LBClient) DoTimeoutWB(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration, b Balancer) error {
 	if pc := c.get(b); pc != nil {
 		deadline := time.Now().Add(timeout)
@@ -39,7 +39,7 @@ func (c *LBClient) DoTimeoutWB(req *fasthttp.Request, resp *fasthttp.Response, t
 	return ErrNoAliveClients
 }
 
-// Execute request with internal timeout and balancer.
+// DoWB executes request with internal timeout and balancer.
 func (c *LBClient) DoWB(req *fasthttp.Request, resp *fasthttp.Response, b Balancer) error {
 	timeout := c.Timeout
 	if timeout <= 0 {

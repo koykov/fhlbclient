@@ -13,7 +13,7 @@ const (
 	DefaultPenalty = time.Second * 3
 )
 
-// Load balancing client.
+// LBClient implements load balancing client.
 //
 // See https://github.com/valyala/fasthttp/blob/master/lbclient.go for details and comparison.
 type LBClient struct {
@@ -72,17 +72,17 @@ func (c *LBClient) init() {
 	}
 }
 
-// Execute request with given deadline.
+// DoDeadline executes request with given deadline.
 func (c *LBClient) DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
 	return c.DoDeadlineWB(req, resp, deadline, c.Balancer)
 }
 
-// Execute request with given timeout.
+// DoTimeout executes request with given timeout.
 func (c *LBClient) DoTimeout(req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
 	return c.DoTimeoutWB(req, resp, timeout, c.Balancer)
 }
 
-// Execute request with internal timeout.
+// Do executes request with internal timeout.
 func (c *LBClient) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 	return c.DoWB(req, resp, c.Balancer)
 }
