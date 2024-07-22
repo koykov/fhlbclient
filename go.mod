@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/koykov/byteconv v1.0.0
-	github.com/valyala/fasthttp v1.40.0
+	github.com/valyala/fasthttp v1.31.0
 )
 
 require (
